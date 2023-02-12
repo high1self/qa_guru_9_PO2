@@ -1,86 +1,95 @@
-from selene import have, command
+from selene import have
 from selene.support.shared import browser
-from demoqa_tests.model.controls import dropdown
-from demoqa_tests.model.controls import datepicker
-from demoqa_tests.model.controls import radiobutton
-from demoqa_tests.model.controls import checkbox
-from demoqa_tests.utils import path_to_file
-from demoqa_tests.utils.scroll import scroll_to
+
+from demoqa_tests.model.methods.checkbox import Checkbox
+from demoqa_tests.model.methods.datepicker import Datepicker
+from demoqa_tests.model.methods.dropdown import Dropdown
+from demoqa_tests.model.methods.input_tab import InputTab
+from demoqa_tests.model.methods.radio import Radio
+from demoqa_tests.utils import path, config
 
 
-def given_opened(url):
-    browser.open(url)
+class PracticePage:
 
+    def open(self):
+        browser.open('/automation-practice-form')
+        return self
 
-def submit():
-    browser.element('#submit').press_enter()
+    def fill_name(self, student):
+        browser.element('#firstName').set_value(student.first_name)
+        browser.element('#lastName').set_value(student.last_name)
+        return self
 
+    def fill_contacts(self, student):
+        browser.element('#userEmail').set_value(student.email)
+        browser.element('#userNumber').set_value(student.phone)
+        return self
 
-def select_state(value):
-    dropdown.select('#state', by_text=value)
+    def set_gender(self, student):
+        gender = Radio(browser.all('[name=gender]'))
+        gender.set(student.gender)
+        return self
 
+    def input_birthday(self, student):
+        birthday_datepicker = Datepicker(browser.element('#dateOfBirthInput'))
+        birthday_datepicker.set(student.birthday)
+        return self
 
-def select_city(value):
-    dropdown.select('#city', by_text=value)
+    def input_subject(self, student):
+        input_tab = InputTab(browser.element('#subjectsInput'), browser.all('.subjects-auto-complete__option'))
+        input_tab.set_value(student.subject)
+        return self
 
+    def set_hobby(self, student):
+        select_hobby = Checkbox(browser.all('[for^=hobbies-checkbox]'))
+        select_hobby.set(student.hobby)
+        return self
 
-def type_firstname(text):
-    browser.element('#firstName').type(text)
+    def send_image(self, student):
+        browser.element('#uploadPicture').set_value(path.to_resources(student.image))
+        return self
 
+    def input_address(self, student):
+        browser.element('#currentAddress').set_value(student.address)
+        return self
 
-def type_lastname(text):
-    browser.element('#lastName').type(text)
+    def select_state(self, student):
+        dropdown_state = Dropdown(browser.element('#state'), browser.all('[id^=react-select][id*=option]'))
+        dropdown_state.select(student.state)
+        return self
 
+    def select_city(self, student):
+        dropdown_city = Dropdown(browser.element('#city'), browser.all('[id^=react-select][id*=option]'))
+        dropdown_city.select(student.city)
+        return self
 
-def type_email(text):
-    browser.element('#userEmail').type(text)
+    def submit(self):
+        browser.element('#submit').press_enter()
+        return self
 
+    def fill(self, student):
+        self.fill_name(student) \
+            .fill_contacts(student) \
+            .set_gender(student) \
+            .input_birthday(student) \
+            .input_subject(student) \
+            .set_hobby(student) \
+            .send_image(student) \
+            .input_address(student) \
+            .select_state(student) \
+            .select_city(student)
+        return self
 
-def type_phone_number(text):
-    browser.element('#userNumber').type(text)
-
-
-def type_address(text):
-    browser.element('#currentAddress').type(text)
-
-
-def select_gender(gender):
-    radiobutton.gender('[name=gender]', gender)
-
-
-def select_hobby(hobby):
-    checkbox.hobby('[for^=hobbies-checkbox]', hobby)
-
-
-def pick_month(month):
-    browser.element('.react-datepicker__month-select').click()
-    datepicker.date('.react-datepicker__month-select', month)
-
-
-def pick_year(year):
-    browser.element('.react-datepicker__year-select').click()
-    datepicker.date('.react-datepicker__year-select', year)
-
-
-def pick_day(day):
-    browser.element(f'.react-datepicker__day--0{day}').click()
-
-
-def click_on_datepicker():
-    browser.element('#dateOfBirthInput').click()
-
-
-def type_subject(subject):
-    browser.element('#subjectsInput').type(subject).press_enter()
-
-
-def upload_picture(path_to_picture):
-    path_to_file.create_path('#uploadPicture', path_to_picture)
-
-
-def assert_fields(*args):
-    browser.element('.table').all('td').even.should(have.texts(args))
-
-
-def scroll_to_address():
-    scroll_to('#currentAddress')
+    def assert_results_registration(self, student):
+        browser.all('tbody tr td:last-child').should(have.exact_texts(
+            student.first_name + ' ' + student.last_name,
+            student.email,
+            student.gender,
+            student.phone,
+            student.birthday.strftime(config.datetime_view_format),
+            student.subject,
+            ', '.join(hobby.name for hobby in student.hobby),
+            student.image,
+            student.address,
+            student.state + ' ' + student.city))
+        return self
